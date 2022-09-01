@@ -17,6 +17,7 @@ import matplotlib.colors as mcolors
 import umap
 
 import util
+import scanpy.api as sc
 
 
 class scSemiGAN(object):
@@ -88,7 +89,7 @@ class scSemiGAN(object):
         run_config.gpu_options.allow_growth = True
         self.sess = tf.Session(config=run_config)
 
-    def train(self, num_batches=10000):
+    def train(self, num_batches=1000):
 
         now = datetime.datetime.now(dateutil.tz.tzlocal())
         timestamp = now.strftime('%Y_%m_%d_%H_%M_%S')
@@ -202,15 +203,27 @@ class scSemiGAN(object):
 
 
     def visualize(self, feature, labels):
-        # reducer = umap.UMAP(random_state=501)
-        # reduced_data = reducer.fit_transform(feature)
+        matplotlib.use("Agg")
+        matplotlib.rcParams['figure.dpi'] = 600
+        colors_use = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#bcbd22', '#17becf',
+              '#aec7e8', '#ffbb78', '#98df8a', '#ff9896', '#bec1d4', '#bb7784', '#4a6fe3', '#FFFF00', '#111010']
+        
+        adata = sc.AnnData(feature)
+        labels = labels.astype(str)
+        adata.obs["celltype"] = labels
 
-        tsne = TSNE(n_components=2, init='pca', random_state=501)
-        reduced_data = tsne.fit_transform(feature)
+        num_celltype = len(adata.obs["celltype"].unique())
+        adata.uns["celltype_colors"] = list(colors_use[:num_celltype])
 
-        plt.scatter(reduced_data[:, 0], reduced_data[:, 1], s=10, c=labels, cmap="tab20")
-        plt.savefig("one.png")
-        plt.show()   
+        adata.obsm["X"] = feature
+        sc.tl.tsne(adata, use_rep="X", learning_rate=150, n_jobs=10)
+        sc.pp.neighbors(adata, n_neighbors=10, use_rep="X")
+        sc.tl.umap(adata)
+
+        sc.pl.tsne(adata, color=["celltype"], title=["scSemiGAN"],
+           show=False, save=True, size=50000 / adata.shape[0])
+        sc.pl.umap(adata, color=["celltype"], title=["scSemiGAN"],
+           show=False, save=True, size=50000 / adata.shape[0])
         
 
     def save(self, timestamp):
