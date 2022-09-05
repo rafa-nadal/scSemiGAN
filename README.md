@@ -22,6 +22,10 @@ python eval_sim.py
 
 After finishing the entire training, you can get the annotation accuracy and F1-score on the query data respectively. Besides, we use t-SNE and UMAP to visualize the learned latent space representation in a two dimensional plane. The t-SNE and UMAP plots are in folder "figures/tsne.pdf" and "figures/umap.pdf" respectively. 
 
+For a real scRNA-seq dataset, the running process is the same as above. You just need to run the command:
+
+python eval_real.py
+
 Method
 -----
 ![model](https://github.com/rafa-nadal/scSemiGAN/blob/main/result/method_color1.png)
