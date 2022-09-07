@@ -88,7 +88,7 @@ class scSemiGAN(object):
         run_config.gpu_options.allow_growth = True
         self.sess = tf.Session(config=run_config)
 
-    def train(self, num_batches=1000):
+    def train(self, num_batches=4000):
 
         now = datetime.datetime.now(dateutil.tz.tzlocal())
         timestamp = now.strftime('%Y_%m_%d_%H_%M_%S')
