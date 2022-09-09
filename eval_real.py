@@ -117,15 +117,26 @@ class scSemiGAN(object):
             bz = self.z_sampler(batch_size, self.z_dim, self.num_classes)
             self.sess.run(self.g_adam, feed_dict={self.z: bz, self.x_sup: sup_x, self.x_sup_label: sup_label_onehot, self.x_sup_label_value: sup_label})
 
-            if (t + 1) % 100 == 0:
+            if t % 100 == 0:
                 bx = self.x_sampler.train(batch_size)
                 bz = self.z_sampler(batch_size, self.z_dim, self.num_classes)
 
-                nmi, ari, acc, f1_score_micro, f1_score_macro, f1_score_weighed = self.recon_enc(timestamp, matrix_left, label_left)
-                
-            if (t + 1) % 1000 == 0:
-                nmi, ari, acc, f1_score_micro, f1_score_macro, f1_score_weighed = self.recon_enc_vis(timestamp, matrix_left, label_left)
+                nmi, ari, acc, f1_score_micro, f1_score_macro, f1_score_weighed, labels_pred = self.recon_enc(timestamp, matrix_left, label_left)
 
+                if t == 0:
+                  labels_pred_last = labels_pred
+
+                if t > 0 and sum(a_ != b_ for a_, b_ in zip(labels_pred, labels_pred_last)) / len(labels_pred) <= 0.005:
+                  print(sum(a_ != b_ for a_, b_ in zip(labels_pred, labels_pred_last)) / len(labels_pred))
+                  print("------------------------------")
+                  print("Final result")
+                  nmi, ari, acc, f1_score_micro, f1_score_macro, f1_score_weighed, labels_pred = self.recon_enc_vis(timestamp, matrix_left, label_left)
+                  print("------------------------------")
+                  break;
+                else:
+                  labels_pred_last = labels_pred
+
+        nmi, ari, acc, f1_score_micro, f1_score_macro, f1_score_weighed, labels_pred = self.recon_enc_vis(timestamp, matrix_left, label_left)
 
     def recon_enc(self, timestamp, matrix_left, label_left):
 
@@ -148,9 +159,9 @@ class scSemiGAN(object):
 
             latent[pt_indx, :] = np.concatenate((zhats_gen, zhats_label), axis=1)
 
-        nmi, ari, acc, f1_score_micro, f1_score_macro, f1_score_weighed = self._eval_cluster(latent[:, self.dim_gen:], label_recon, timestamp)
+        nmi, ari, acc, f1_score_micro, f1_score_macro, f1_score_weighed, labels_pred = self._eval_cluster(latent[:, self.dim_gen:], label_recon, timestamp)
 
-        return nmi, ari, acc, f1_score_micro, f1_score_macro, f1_score_weighed
+        return nmi, ari, acc, f1_score_micro, f1_score_macro, f1_score_weighed, labels_pred
 
 
     def recon_enc_vis(self, timestamp, matrix_left, label_left):
@@ -174,11 +185,11 @@ class scSemiGAN(object):
 
             latent[pt_indx, :] = np.concatenate((zhats_gen, zhats_label), axis=1)
 
-        nmi, ari, acc, f1_score_micro, f1_score_macro, f1_score_weighed = self._eval_cluster(latent[:, self.dim_gen:], label_recon, timestamp)
+        nmi, ari, acc, f1_score_micro, f1_score_macro, f1_score_weighed, labels_pred = self._eval_cluster(latent[:, self.dim_gen:], label_recon, timestamp)
         
         self.visualize(latent, label_recon)
 
-        return nmi, ari, acc, f1_score_micro, f1_score_macro, f1_score_weighed
+        return nmi, ari, acc, f1_score_micro, f1_score_macro, f1_score_weighed, labels_pred
 
 
     def _eval_cluster(self, latent_rep, labels_true, timestamp):
@@ -198,7 +209,7 @@ class scSemiGAN(object):
         print(' #Points = {}, K = {}, NMI = {}, ARI = {},  Accuracy = {},  F1_score_micro = {},  F1_score_macro = {}, F1_score_weighed = {}'
               .format(latent_rep.shape[0], self.num_classes, nmi, ari, accuracy, f1_score_micro, f1_score_macro, f1_score_weighed))
 
-        return nmi, ari, accuracy, f1_score_micro, f1_score_macro, f1_score_weighed
+        return nmi, ari, accuracy, f1_score_micro, f1_score_macro, f1_score_weighed, labels_pred
 
 
     def visualize(self, feature, labels):
